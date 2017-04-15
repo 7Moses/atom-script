@@ -4,6 +4,7 @@
 _ = require 'underscore'
 path = require 'path'
 GrammarUtils = require '../lib/grammar-utils'
+shell = require('electron').shell
 
 module.exports =
   '1C (BSL)':
@@ -166,6 +167,11 @@ module.exports =
       args: (context) -> GrammarUtils.CScompiler.args.concat [context.getCode()]
     'File Based':
       command: 'coffee'
+      args: (context) -> [context.filepath]
+      
+  "Common Lisp":
+    "File Based":
+      command: "clisp"
       args: (context) -> [context.filepath]
 
   Crystal:
@@ -394,6 +400,12 @@ module.exports =
         args = ['-c', "kotlinc #{context.filepath} -include-runtime -d /tmp/#{jarName} && java -jar /tmp/#{jarName}"]
         return args
 
+  LAMMPS:
+    if GrammarUtils.OperatingSystem.isDarwin() || GrammarUtils.OperatingSystem.isLinux()
+      "File Based":
+        command: "lammps"
+        args: (context) -> ['-log', 'none', '-in', context.filepath]
+
   LaTeX:
     "File Based":
       command: "latexmk"
@@ -485,7 +497,7 @@ module.exports =
   'MIPS Assembler':
     "File Based":
       command: "spim"
-      args: (context) -> [context.filepath]
+      args: (context) -> ['-f', context.filepath]
 
   MoonScript:
     "Selection Based":
@@ -646,6 +658,15 @@ module.exports =
       command: "bash"
       args: (context) -> ['-c', 'cd \"' + context.filepath.replace(/[^\/]*$/, '') + '\"; swipl -f \"' + context.filepath + '\" -t main --quiet']
 
+  PureScript:
+    "File Based":
+      command: if GrammarUtils.OperatingSystem.isWindows() then "cmd" else "bash"
+      args: (context) ->
+        if GrammarUtils.OperatingSystem.isWindows()
+          ['/c cd "' + context.filepath.replace(/[^\/]*$/, '') + '" && pulp run']
+        else
+          ['-c', 'cd "' + context.filepath.replace(/[^\/]*$/, '') + '" && pulp run']
+
   Python:
     "Selection Based":
       command: "python"
@@ -695,6 +716,16 @@ module.exports =
         else
           args = ['-c', "rebuild '#{progname}.native' && '#{progname}.native'"]
         return args
+
+  "Ren'Py":
+    "File Based":
+      command: "renpy"
+      args: (context) -> [context.filepath.substr(0, context.filepath.lastIndexOf("/game"))]
+
+  'Robot Framework':
+    "File Based":
+      command: 'robot'
+      args: (context) -> [context.filepath]
 
   RSpec:
     "Selection Based":
@@ -785,6 +816,14 @@ module.exports =
       command: "fish"
       args: (context) -> [context.filepath]
 
+  "SQL":
+    "Selection Based":
+      command: "echo"
+      args: (context) -> ['SQL requires setting \'Script: Run Options\' directly. See https://github.com/rgbkrk/atom-script/tree/master/examples/hello.sql for further information.']
+    "File Based":
+      command: "echo"
+      args: (context) -> ['SQL requires setting \'Script: Run Options\' directly. See https://github.com/rgbkrk/atom-script/tree/master/examples/hello.sql for further information.']
+
   "SQL (PostgreSQL)":
     "Selection Based":
       command: "psql"
@@ -822,6 +861,11 @@ module.exports =
       command: "tclsh"
       args: (context) -> [context.filepath]
 
+  Turing:
+    "File Based":
+      command: "turing"
+      args: (context) -> ['-run', context.filepath]
+
   TypeScript:
     "Selection Based":
       command: "ts-node"
@@ -829,3 +873,22 @@ module.exports =
     "File Based":
       command: "ts-node"
       args: (context) -> [context.filepath]
+
+  VBScript:
+    'Selection Based':
+      command: 'cscript'
+      args: (context) ->
+        code = context.getCode()
+        tmpFile = GrammarUtils.createTempFileWithCode(code, ".vbs")
+        ['//NOLOGO',tmpFile]
+    'File Based':
+      command: 'cscript'
+      args: (context) -> ['//NOLOGO', context.filepath]
+
+  HTML:
+    "File Based":
+      command: 'echo'
+      args: (context) ->
+        uri = 'file://' + context.filepath
+        shell.openExternal(uri)
+        ['HTML file opened at:', uri]
